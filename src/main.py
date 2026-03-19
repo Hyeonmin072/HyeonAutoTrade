@@ -190,7 +190,8 @@ class TradingBot:
         self.order_manager = OrderManager(
             exchange_adapter=self.exchange,
             risk_manager=self.risk_manager,
-            dry_run=self.config["mode"]["dry_run"]
+            dry_run=self.config["mode"]["dry_run"],
+            config=self.config
         )
         
         # 신호 생성기 (AI 활성화 시 hybrid/primary 전략 사용)

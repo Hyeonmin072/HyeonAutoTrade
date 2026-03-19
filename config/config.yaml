@@ -73,18 +73,18 @@ strategies:
     - macd
     - scalping
   default: scalping                   # 기본: 단타 전략
-  cooldown_minutes: 1            # 동일 신호 재발생 간격 (분)
+  cooldown_minutes: 1            # 동일 신호 재발생 간격 (분) - 매수 빈도 증가
   # 단타 전략 설정 (default: scalping 사용 시)
   scalping:
     rsi:
       period: 7                  # 빠른 RSI (기본 14보다 짧음)
-      oversold: 25               # 과매도 (기본 30보다 좁음)
+      oversold: 35               # 과매도 (35: 넓게 → 매수 신호 더 자주)
       overbought: 75              # 과매수 (기본 70보다 좁음)
     macd:
       fast_period: 6             # 짧은 MACD
       slow_period: 13
       signal_period: 5
-    require_both: true           # RSI+MACD 동시 신호 시에만 진입
+    require_both: false          # RSI 또는 MACD 하나만 있어도 진입 (매수 빈도 증가)
 
 # 리스크 관리 설정
 risk_management:
@@ -161,8 +161,8 @@ ai:
   
   # 신호 생성 설정
   signal_interval: 60          # 신호 생성 간격 (초)
-  confidence_threshold: 0.6     # 신뢰도 임계값 (이하이면 HOLD)
-  conflict_action: hold         # 신호 충돌 시 행동: hold, follow_rule, follow_ai
+  confidence_threshold: 0.5     # 신뢰도 임계값 (낮추면 매수 더 자주)
+  conflict_action: follow_rule  # 규칙 vs AI 충돌 시 규칙 따름 (매수 빈도 증가)
   
   # 비용 제어
   cache_enabled: true           # 응답 캐싱 활성화

@@ -63,13 +63,15 @@ class OrderManager:
         self,
         exchange_adapter: ExchangeAdapter,
         risk_manager: RiskManager,
-        dry_run: bool = True
+        dry_run: bool = True,
+        config: Optional[Dict[str, Any]] = None
     ):
         """
         Args:
             exchange_adapter: 거래소 어댑터
             risk_manager: 리스크 관리자
             dry_run: 시뮬레이션 모드
+            config: 전체 설정 (strategies.cooldown_minutes 사용)
         """
         self.exchange = exchange_adapter
         self.risk_manager = risk_manager
@@ -79,9 +81,12 @@ class OrderManager:
         self._orders: Dict[str, Order] = {}
         self._order_history: List[Order] = []
         
-        # 중복 방지
+        # 중복 방지 - config에서 쿨다운 분 수 읽기 (기본 1분)
         self._recent_signals: Dict[str, datetime] = {}
-        self._signal_cooldown = timedelta(minutes=5)
+        cooldown_min = 1
+        if config:
+            cooldown_min = config.get("strategies", {}).get("cooldown_minutes", 1)
+        self._signal_cooldown = timedelta(minutes=cooldown_min)
         
         # 재시도 설정
         self._max_retries = 3
