@@ -59,6 +59,13 @@ function renderStatus(data) {
     <dt>거래유형</dt><dd>${modeStr}</dd>
     <dt>AI</dt><dd>${data.ai_enabled ? '활성' : '비활성'}</dd>
   `;
+  const aiBtn = document.getElementById('aiToggleBtn');
+  if (aiBtn) {
+    const enabled = !!data.ai_enabled;
+    aiBtn.textContent = enabled ? 'AI: 켜짐' : 'AI: 꺼짐';
+    aiBtn.classList.toggle('btn-primary', enabled);
+    aiBtn.classList.toggle('btn-secondary', !enabled);
+  }
   setStatus(data.running);
 }
 
@@ -120,7 +127,7 @@ function fmtAmount(currency, amount) {
 function renderBalances(data) {
   const tbody = document.getElementById('balancesBody');
   if (!data || Object.keys(data).length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty">보유 코인 없음</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">보유 코인 없음</td></tr>';
     return;
   }
   const items = Object.values(data).sort((a, b) => {
@@ -134,6 +141,9 @@ function renderBalances(data) {
       <td class="mono">${fmtAmount(b.currency, b.total)}</td>
       <td class="mono">${fmtAmount(b.currency, b.free)}</td>
       <td class="mono">${fmtAmount(b.currency, b.used)}</td>
+      <td class="mono">
+        ${b.current_price != null ? fmtAmount(b.quote || 'KRW', b.current_price) + ' / ' : ''}${b.value_quote != null ? fmtAmount(b.quote || 'KRW', b.value_quote) : '-'}
+      </td>
     </tr>
   `).join('');
 }
@@ -148,13 +158,15 @@ function renderPositions(data) {
     const pnl = p.unrealized_pnl ?? 0;
     const pnlPct = p.unrealized_pnl_percent ?? 0;
     const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+    const symbol = p.symbol || '';
+    const quote = symbol.includes('/') ? symbol.split('/')[1] : 'KRW';
     return `
       <tr>
-        <td class="mono">${p.symbol}</td>
-        <td class="mono">${fmt(p.entry_price)}</td>
-        <td class="mono">${fmt(p.current_price)}</td>
+        <td class="mono">${symbol}</td>
+        <td class="mono">${fmtAmount(quote, p.entry_price)}</td>
+        <td class="mono">${fmtAmount(quote, p.current_price)}</td>
         <td class="mono">${fmt(p.quantity)}</td>
-        <td class="mono ${pnlClass}">${fmt(pnl)}</td>
+        <td class="mono ${pnlClass}">${fmtAmount(quote, pnl)}</td>
         <td class="mono ${pnlClass}">${fmtPercent(pnlPct)}</td>
       </tr>
     `;
@@ -269,9 +281,70 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
+function renderStrategyControls(status, strategies) {
+  const select = document.getElementById('strategySelect');
+  const descEl = document.getElementById('strategyDescription');
+  if (!select || !strategies) return;
+
+  const current = strategies.current || {};
+  const available = strategies.available || [];
+  const descriptions = strategies.descriptions || {};
+
+  // 옵션 렌더링
+  select.innerHTML = available.map(s => `
+    <option value="${s.name}">${s.label}</option>
+  `).join('');
+
+  // 현재 규칙 전략 선택
+  if (current.base) {
+    select.value = current.base;
+  }
+
+  // 설명 표시
+  const currentName = select.value || current.base;
+  const description =
+    (available.find(s => s.name === currentName)?.description) ||
+    descriptions[currentName] ||
+    '-';
+  descEl.textContent = description;
+
+  // AI 하이브리드 / AI-only 정보 추가
+  if (current.ai_enabled) {
+    const aiMode = current.ai_mode || 'hybrid';
+    const aiDescMap = strategies.ai_strategies || {};
+    const extra =
+      aiMode === 'hybrid'
+        ? (aiDescMap.hybrid || '')
+        : (aiDescMap.gemini || '');
+    if (extra) {
+      descEl.textContent = description + ' / ' + extra;
+    }
+  }
+
+  // 변경 이벤트 (중복 등록 방지 위해 한번만 등록)
+  if (!select.dataset.bound) {
+    select.addEventListener('change', async () => {
+      const name = select.value;
+      if (!name) return;
+      try {
+        await fetch(API_BASE + '/strategy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        // 전략 변경 후 전체 상태 갱신
+        refresh();
+      } catch (err) {
+        console.error('Strategy change failed:', err);
+      }
+    });
+    select.dataset.bound = 'true';
+  }
+}
+
 async function refresh() {
   try {
-    const [status, stats, prices, positions, trades, aiInsights, balances] = await Promise.all([
+    const [status, stats, prices, positions, trades, aiInsights, balances, strategies] = await Promise.all([
       fetchApi('/status'),
       fetchApi('/stats'),
       fetchApi('/prices'),
@@ -279,8 +352,10 @@ async function refresh() {
       fetchApi('/trades?limit=20'),
       fetchApi('/ai_insights'),
       fetchApi('/balances'),
+      fetchApi('/strategies'),
     ]);
     renderStatus(status);
+    renderStrategyControls(status, strategies);
     renderStats(stats);
     renderPrices(prices);
     renderBalances(balances);
@@ -299,6 +374,17 @@ document.getElementById('stopBtn').addEventListener('click', async () => {
     refresh();
   } catch (err) {
     console.error('Stop failed:', err);
+  }
+});
+
+// AI 토글 버튼
+document.getElementById('aiToggleBtn').addEventListener('click', async () => {
+  try {
+    await fetch(API_BASE + '/ai/toggle', { method: 'POST' });
+    // 상태 새로고침
+    refresh();
+  } catch (err) {
+    console.error('AI toggle failed:', err);
   }
 });
 

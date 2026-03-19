@@ -152,8 +152,13 @@ class OrderManager:
         if amount <= 0:
             return OrderResult(success=False, error="Amount too small")
         
-        # 시뮬레이션 모드
+        # 시뮬레이션 모드: 현재가를 사용해 체결가 계산
         if self.dry_run:
+            if price is None:
+                try:
+                    price = await self._get_current_price(symbol)
+                except Exception:
+                    price = 0
             logger.info(f"[DRY RUN] Buy order: {symbol} {amount} @ {price or 'market'}")
             return OrderResult(
                 success=True,
@@ -198,8 +203,13 @@ class OrderManager:
             logger.warning(f"No holdings for {symbol}")
             return OrderResult(success=False, error="No holdings")
         
-        # 시뮬레이션 모드
+        # 시뮬레이션 모드: 현재가를 사용해 체결가 계산
         if self.dry_run:
+            if price is None:
+                try:
+                    price = await self._get_current_price(symbol)
+                except Exception:
+                    price = 0
             logger.info(f"[DRY RUN] Sell order: {symbol} {amount} @ {price or 'market'}")
             return OrderResult(
                 success=True,

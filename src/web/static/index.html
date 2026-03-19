@@ -17,7 +17,10 @@
         <span class="status-dot"></span>
         <span class="status-text">연결 중...</span>
       </div>
-      <button class="btn btn-danger btn-sm" id="stopBtn" title="봇 중지">중지</button>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" id="aiToggleBtn" title="AI 활성/비활성">AI: -</button>
+        <button class="btn btn-danger btn-sm" id="stopBtn" title="봇 중지">중지</button>
+      </div>
     </header>
 
     <main class="main">
@@ -31,6 +34,13 @@
             <dt>거래유형</dt><dd>-</dd>
             <dt>AI</dt><dd>-</dd>
           </dl>
+          <div class="strategy-control">
+            <label for="strategySelect">매수 전략</label>
+            <select id="strategySelect">
+              <option value="">로딩 중...</option>
+            </select>
+            <p id="strategyDescription" class="strategy-desc">-</p>
+          </div>
         </article>
         <article class="card">
           <h2>잔고 / 손익</h2>
@@ -73,10 +83,11 @@
                     <th>총 보유</th>
                     <th>사용 가능</th>
                     <th>주문 사용</th>
+                    <th>현재가 / 평가액</th>
                   </tr>
                 </thead>
                 <tbody id="balancesBody">
-                  <tr><td colspan="4" class="empty">로딩 중...</td></tr>
+                  <tr><td colspan="5" class="empty">로딩 중...</td></tr>
                 </tbody>
               </table>
             </div>

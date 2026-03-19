@@ -394,15 +394,31 @@ class NotifierManager:
             "SHORT": "숏 진입",
             "CLOSE_SHORT": "숏 청산",
         }.get(action, action)
+        # 총 거래 금액 (원화/기준통화)
+        quote = (symbol.split("/")[-1] if "/" in symbol else "").upper()
+        total_value = price * amount if price is not None else None
+        total_str = f"{total_value:,.0f} {quote}" if total_value is not None and quote else None
+
+        lines = [f"{action_ko} {amount} {symbol} @ {price:,.0f}"]
+        if total_str:
+            lines.append(f"총 {total_str}")
+        # 남은 잔고 (옵션) - 호출 측에서 balance 인자로 넘길 수 있음
+        balance = kwargs.get("balance")
+        if balance is not None:
+            lines.append(f"남은 잔고: {float(balance):,.0f} {quote or ''}".rstrip())
+        message = "\n".join(lines)
+
         await self.send(
             NotificationLevel.INFO,
             f"거래 체결: {action_ko}",
-            f"{action_ko} {amount} {symbol} @ {price:,.0f}",
+            message,
             symbol=symbol,
             metadata={
                 "거래": action_ko,
                 "가격": str(price),
-                "수량": str(amount)
+                "수량": str(amount),
+                "총금액": total_str or "",
+                "남은잔고": str(balance) if balance is not None else ""
             }
         )
     

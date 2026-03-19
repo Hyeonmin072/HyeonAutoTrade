@@ -232,25 +232,36 @@ class TradingBot:
         logger.info(f"Components initialized for {exchange_name}")
     
     def _setup_notifiers(self) -> None:
-        """알림 채널 설정"""
-        notif_config = self.config["monitoring"]["notifications"]
+        """알림 채널 설정 (.env 값도 지원)"""
+        notif_config = self.config.get("monitoring", {}).get("notifications", {})
         
         # Telegram
-        if notif_config.get("telegram", {}).get("enabled"):
-            telegram_config = notif_config["telegram"]
-            if telegram_config.get("bot_token") and telegram_config.get("chat_id"):
-                self.notifier.add_channel(TelegramNotifier(
-                    bot_token=telegram_config["bot_token"],
-                    chat_id=telegram_config["chat_id"]
-                ))
+        tele_cfg = notif_config.get("telegram", {}) or {}
+        # 1) config.yaml 값 우선
+        bot_token = tele_cfg.get("bot_token") or os.getenv("TELEGRAM_BOT_TOKEN", "")
+        chat_id = tele_cfg.get("chat_id") or os.getenv("TELEGRAM_CHAT_ID", "")
+        # enabled 플래그: config.yaml 이 true 이거나, .env 에 토큰/채팅ID가 둘 다 있으면 자동 활성화
+        enabled_flag = tele_cfg.get("enabled")
+        telegram_enabled = bool(enabled_flag) or (bool(bot_token) and bool(chat_id))
+        
+        if telegram_enabled and bot_token and chat_id:
+            self.notifier.add_channel(
+                TelegramNotifier(
+                    bot_token=bot_token,
+                    chat_id=chat_id,
+                )
+            )
         
         # Slack
-        if notif_config.get("slack", {}).get("enabled"):
-            slack_config = notif_config["slack"]
-            if slack_config.get("webhook_url"):
-                self.notifier.add_channel(SlackNotifier(
-                    webhook_url=slack_config["webhook_url"]
-                ))
+        slack_cfg = notif_config.get("slack", {}) or {}
+        webhook_url = slack_cfg.get("webhook_url") or os.getenv("SLACK_WEBHOOK_URL", "")
+        slack_enabled = slack_cfg.get("enabled") and bool(webhook_url)
+        if slack_enabled:
+            self.notifier.add_channel(
+                SlackNotifier(
+                    webhook_url=webhook_url,
+                )
+            )
     
     async def _on_health_failure(self, results: Dict) -> None:
         """헬스체크 실패 시 콜백"""
@@ -641,7 +652,8 @@ class TradingBot:
                 action="BUY",
                 symbol=symbol,
                 price=result.order.price,
-                amount=amount
+                amount=amount,
+                balance=self.risk_manager.total_balance
             )
             
             logger.info(f"BUY executed: {symbol} {amount} @ {result.order.price}")
@@ -688,7 +700,8 @@ class TradingBot:
                 action="SELL",
                 symbol=symbol,
                 price=result.order.price,
-                amount=position.quantity
+                amount=position.quantity,
+                balance=self.risk_manager.total_balance
             )
             
             logger.info(f"SELL executed: {symbol} {position.quantity} @ {result.order.price}, PnL: {realized_pnl:.2f}")
@@ -747,7 +760,8 @@ class TradingBot:
                 action="SHORT",
                 symbol=symbol,
                 price=result.order.price,
-                amount=amount
+                amount=amount,
+                balance=self.risk_manager.total_balance
             )
             logger.info(f"SHORT executed: {symbol} {amount} @ {result.order.price}")
     
@@ -792,7 +806,8 @@ class TradingBot:
                 action="CLOSE_SHORT",
                 symbol=symbol,
                 price=result.order.price,
-                amount=position.quantity
+                amount=position.quantity,
+                balance=self.risk_manager.total_balance
             )
             logger.info(f"CLOSE SHORT: {symbol} {position.quantity} @ {result.order.price}, PnL: {realized_pnl:.2f}")
     
