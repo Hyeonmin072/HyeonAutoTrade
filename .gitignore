@@ -1,0 +1,25 @@
+# 환경변수 (API 키 포함 - 절대 커밋 금지)
+.env
+config/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# 데이터/로그
+data/
+logs/
+*.db
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

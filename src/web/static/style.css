@@ -1,0 +1,475 @@
+/* AutoCoinTrade - 트레이딩 대시보드 */
+:root {
+  --bg-dark: #0d1117;
+  --bg-card: #161b22;
+  --bg-hover: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --success: #3fb950;
+  --danger: #f85149;
+  --warning: #d29922;
+  --radius: 8px;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Noto Sans KR', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-dark);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.logo {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: pulse 2s infinite;
+}
+
+.status-badge.running .status-dot {
+  background: var(--success);
+}
+
+.status-badge.stopped .status-dot {
+  background: var(--danger);
+  animation: none;
+}
+
+.status-badge.error .status-dot {
+  background: var(--warning);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.header .btn {
+  margin-left: auto;
+}
+
+/* Buttons */
+.btn {
+  font-family: var(--font-sans);
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-danger {
+  background: rgba(248, 81, 73, 0.2);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: rgba(248, 81, 73, 0.35);
+}
+
+/* Main */
+.main {
+  flex: 1;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.card h2 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.info-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.info-list dt {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.info-list dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+/* Section */
+.section {
+  margin-bottom: 1.5rem;
+}
+
+.section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  color: var(--text-muted);
+}
+
+/* AI 인사이트 섹션 헤더 컴팩트 */
+.section:has(.insights-grid) h2 {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Tabs */
+.tabs-section {
+  margin-top: 0.5rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  font-family: var(--font-sans);
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panels {
+  min-height: 200px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.price-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.price-card .symbol {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.price-card .price {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--accent);
+}
+
+.price-card .change {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.price-card .change.positive {
+  color: var(--success);
+}
+
+.price-card .change.negative {
+  color: var(--danger);
+}
+
+.price-card .price-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+/* AI 인사이트 (컴팩트 - 상태만 표시, 상세는 토글) */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem;
+}
+
+.insight-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.5rem;
+}
+
+.insight-card .insight-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.insight-card .symbol {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.insight-card .signal-badge {
+  display: inline-block;
+  padding: 0.12rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.insight-card .signal-badge.buy { background: rgba(63, 185, 80, 0.2); color: var(--success); }
+.insight-card .signal-badge.sell { background: rgba(248, 81, 73, 0.2); color: var(--danger); }
+.insight-card .signal-badge.hold { background: rgba(139, 148, 158, 0.2); color: var(--text-muted); }
+
+.insight-card .skip-badge {
+  font-size: 0.65rem;
+  color: var(--warning);
+  margin-left: 0.2rem;
+  cursor: help;
+}
+
+/* 상세 토글 (기본 접힘) */
+.insight-card .insight-details {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.68rem;
+}
+
+.insight-card .insight-details summary {
+  cursor: pointer;
+  color: var(--accent);
+  user-select: none;
+  font-size: 0.65rem;
+}
+
+.insight-card .insight-details summary:hover {
+  text-decoration: underline;
+}
+
+.insight-card .insight-details summary::marker {
+  font-size: 0.5rem;
+}
+
+.insight-card .insight-details-content {
+  margin-top: 0.3rem;
+  padding: 0.3rem;
+  background: var(--bg-dark);
+  border-radius: 4px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.insight-card .insight-details-content .skip-reason {
+  font-size: 0.68rem;
+  color: var(--warning);
+  margin-bottom: 0.3rem;
+  padding: 0.2rem;
+  background: rgba(210, 153, 34, 0.15);
+  border-radius: 3px;
+}
+
+.insight-card .insight-details-content .reason {
+  font-size: 0.68rem;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+}
+
+.insight-card .insight-details-content .ai-reason {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.insight-card .insight-details-content .meta {
+  font-size: 0.65rem;
+  margin-bottom: 0.25rem;
+}
+
+.insight-card .ai-input-section {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed var(--border);
+}
+
+.insight-card .ai-input-label {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-bottom: 0.1rem;
+}
+
+.insight-card .ai-input-value {
+  font-size: 0.62rem;
+  word-break: break-all;
+}
+
+.insight-card .ai-input-value.mono {
+  font-family: var(--font-mono);
+}
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.table .empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem;
+}
+
+.table .positive {
+  color: var(--success);
+}
+
+.table .negative {
+  color: var(--danger);
+}
+
+.table .mono {
+  font-family: var(--font-mono);
+}
+
+.table .reason-cell {
+  max-width: 280px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+
+/* Footer */
+.footer {
+  margin-top: auto;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

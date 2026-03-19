@@ -1,0 +1,61 @@
+# =============================================================================
+# AutoCoinTrade - systemd 유닛 파일
+# =============================================================================
+# 서비스 설치 방법:
+# 1. 이 파일을 /etc/systemd/system/autocointrade.service로 복사
+# 2. 경로 및 사용자 조정
+# 3. sudo systemctl daemon-reload
+# 4. sudo systemctl enable autocointrade
+# 5. sudo systemctl start autocointrade
+
+[Unit]
+Description=AutoCoinTrade - Automated Crypto Trading Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trader
+Group=trader
+WorkingDirectory=/home/trader/autocointrade
+
+# 환경변수 파일
+EnvironmentFile=/home/trader/autocointrade/.env
+
+# Python 실행
+ExecStart=/home/trader/autocointrade/venv/bin/python -m src.main
+
+# 재시작 정책
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# 보안 설정
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/trader/autocointrade/data
+ReadWritePaths=/home/trader/autocointrade/logs
+
+# 리소스 제한
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# 로깅
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autocointrade
+
+# 헬스체크 (systemd native)
+WatchdogSec=60
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# GracefulShutdown
+KillSignal=SIGTERM
+SendSIGHUP=no
+
+[Install]
+WantedBy=multi-user.target

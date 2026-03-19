@@ -1,0 +1,170 @@
+# =============================================================================
+# AutoCoinTrade - Configuration File
+# =============================================================================
+# 거래소 설정 (업비트 한국 서버 기준)
+exchange:
+  name: upbit                  # binance, upbit, bithumb
+  testnet: false                 # 업비트는 테스트넷 없음 (binance만 지원)
+  default_symbol: BTC/KRW        # 기본 거래 심볼 (업비트: BTC/KRW)
+  # 바이낸스 전용: 선물/마진 모드 (spot=현물, futures=USDT선물)
+  mode: spot                    # spot | futures (binance일 때만 적용)
+  leverage: 1                    # 레버리지 1~125 (futures 모드일 때만, binance만)
+  symbols:                       # 업비트 단타 기본: KRW 마켓
+    - BTC/KRW
+    - ETH/KRW
+    - XRP/KRW
+    - SOL/KRW
+    - ADA/KRW
+    - DOGE/KRW
+    - AVAX/KRW
+    - LINK/KRW
+    - ATOM/KRW
+    # 바이낸스 사용 시: BTC/USDT, ETH/USDT 등 USDT 마켓으로 변경
+
+
+  # rate_limit: 1200             # 분당 요청 수 제한 (기본값 사용)
+  # timeout: 30000               # 요청 타임아웃 (ms)
+
+# 시장 스캐너 설정 (동적 심볼 선정)
+scanner:
+  enabled: true                 # true: 스캔 기반 동적 투자, false: config symbols 고정
+  use_ohlcv_for_signals: true   # true: 1분봉 OHLCV로 신호 (단타용), false: ticker last price
+  rest_interval: 15             # OHLCV/티커 수집 간격 (초) - 15초 권장 (분당 변동률 반영)
+  scan_interval: 300            # 스캔 간격 (초) - 5분 권장
+  max_symbols: 10               # 선정할 최대 심볼 수
+  min_change_percent: 2.0       # 최소 24h 변동률 (%) - 이 이상만 후보
+  min_volatility_percent: 0.1   # 진입 전 최소 변동률 (%) - 최근 5분, 0=비활성화
+  min_volume_quote: 0           # 최소 24h 거래량 (quote 기준, 0=무제한)
+  sort_by: change_abs           # change_abs(급등락), change_up(상승), volume(거래량)
+  quote: KRW                    # 업비트: KRW, 바이낸스: USDT
+
+# WebSocket 설정
+websocket:
+  reconnect:
+    max_retries: 10              # 최대 재연결 시도 횟수
+    base_delay: 1.0              # 기본 재연결 지연 (초)
+    max_delay: 60.0              # 최대 지연 (초)
+    exponential_base: 2.0         # 지수 백오프 기본값
+  ping_interval: 30              # ping 간격 (초)
+  ping_timeout: 10               # ping 타임아웃 (초)
+
+# 기술적 지표 설정
+indicators:
+  rsi:
+    period: 14                   # RSI 기간
+    overbought: 70               # 과매수 구간
+    oversold: 30                 # 과매도 구간
+  macd:
+    fast_period: 12              # 빠른 EMA 기간
+    slow_period: 26              # 느린 EMA 기간
+    signal_period: 9             # 시그널 기간
+  bollinger_bands:
+    period: 20                   # 이동평균 기간
+    std_dev: 2.0                 # 표준편차 배수
+  moving_average:
+    short_period: 5              # 단기 이동평균
+    medium_period: 20            # 중기 이동평균
+    long_period: 60              # 장기 이동평균
+
+# 전략 설정 (업비트 단타 기본 모드)
+strategies:
+  enabled:
+    - rsi
+    - macd
+    - scalping
+  default: scalping                   # 기본: 단타 전략
+  cooldown_minutes: 1            # 동일 신호 재발생 간격 (분)
+  # 단타 전략 설정 (default: scalping 사용 시)
+  scalping:
+    rsi:
+      period: 7                  # 빠른 RSI (기본 14보다 짧음)
+      oversold: 25               # 과매도 (기본 30보다 좁음)
+      overbought: 75              # 과매수 (기본 70보다 좁음)
+    macd:
+      fast_period: 6             # 짧은 MACD
+      slow_period: 13
+      signal_period: 5
+    require_both: true           # RSI+MACD 동시 신호 시에만 진입
+
+# 리스크 관리 설정
+risk_management:
+  stop_loss_percent: -1.0        # 손절 기준 (%)
+  take_profit_percent: 1.5      # 익절 기준 (%)
+  # 단타 모드 시 권장: stop_loss -1%, take_profit 1~2%
+  max_positions: 3              # 최대 동시 포지션 수
+  max_daily_loss_percent: -3.0   # 일일 최대 손실 (%) - 음수로 설정
+  position_size_percent: 10      # 1회 주문 금액 비율 (%)
+  min_balance_percent: 5         # 최소 잔고 유지 비율 (%)
+
+# 실행 설정
+execution:
+  check_interval: 15             # 매수/매도 신호 체크 간격 (초) - 15초 권장 (단타용)
+  order_type: market             # market, limit
+  slippage_tolerance: 0.005      # 슬리피지 허용 범위 (0.5%)
+  retry_attempts: 3              # 주문 재시도 횟수
+  retry_delay: 2                 # 재시도 지연 (초)
+
+# 모니터링 설정
+monitoring:
+  log_level: INFO               # DEBUG, INFO, WARNING, ERROR
+  log_file: logs/trading.log    # 로그 파일 경로
+  log_rotation:
+    max_size: 100               # 최대 파일 크기 (MB)
+    backup_count: 5              # 백업 파일 수
+  health_check:
+    interval: 30                 # 헬스체크 간격 (초)
+    failure_threshold: 3         # 재시작 임계값
+  notifications:
+    telegram:
+      enabled: false
+      bot_token: ""             # Telegram Bot Token
+      chat_id: ""                # Telegram Chat ID
+    slack:
+      enabled: false
+      webhook_url: ""            # Slack Webhook URL
+
+# 데이터 저장 설정
+storage:
+  timeseries:
+    enabled: true
+    db_path: data/timeseries.db # SQLite 시계열 DB 경로
+  positions:
+    db_path: data/positions.db  # SQLite 포지션 DB 경로
+  redis:
+    enabled: false
+    host: localhost
+    port: 6379
+    db: 0
+
+# 실행 모드
+mode:
+  backtest: false               # 백테스트 모드
+  dry_run: false                 # 시뮬레이션 모드 (실제 주문 없음) false : 실제 주문
+
+# =============================================================================
+# Gemini AI 설정
+# =============================================================================
+ai:
+  enabled: true                # AI 기능 활성화 여부
+  provider: gemini              # 현재는 gemini만 지원
+  model: gemini-1.5-flash      # gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash
+  
+  # API 키는 .env 파일에서 GEMINI_API_KEY 또는 GOOGLE_AI_API_KEY로 설정
+  
+  # 호출 제한
+  rate_limit_per_minute: 15    # 분당 API 호출 수 제한
+  max_tokens_per_request: 1024  # 요청당 최대 토큰 수
+  
+  # 전략 모드
+  mode: hybrid                 # hybrid(규칙+AI), primary(AI만), advisor(AI검증만)
+  ai_weight: 0.5              # hybrid 모드에서 AI 신호 비중 (0.0~1.0)
+  
+  # 신호 생성 설정
+  signal_interval: 60          # 신호 생성 간격 (초)
+  confidence_threshold: 0.6     # 신뢰도 임계값 (이하이면 HOLD)
+  conflict_action: hold         # 신호 충돌 시 행동: hold, follow_rule, follow_ai
+  
+  # 비용 제어
+  cache_enabled: true           # 응답 캐싱 활성화
+  cache_ttl_seconds: 60        # 캐시 TTL (초)
+  daily_budget_usd: 1.0        # 일일 API 비용 상한 (USD, 0=무제한)
