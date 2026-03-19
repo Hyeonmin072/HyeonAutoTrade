@@ -27,13 +27,13 @@ exchange:
 
 # 시장 스캐너 설정 (동적 심볼 선정)
 scanner:
-  enabled: true                 # true: 스캔 기반 동적 투자, false: config symbols 고정
+  enabled: false                # 보수 모드: 고정 심볼만 사용
   use_ohlcv_for_signals: true   # true: 1분봉 OHLCV로 신호 (단타용), false: ticker last price
   rest_interval: 15             # OHLCV/티커 수집 간격 (초) - 15초 권장 (분당 변동률 반영)
   scan_interval: 300            # 스캔 간격 (초) - 5분 권장
-  max_symbols: 10               # 선정할 최대 심볼 수
-  min_change_percent: 2.0       # 최소 24h 변동률 (%) - 이 이상만 후보
-  min_volatility_percent: 0.1   # 진입 전 최소 변동률 (%) - 최근 5분, 0=비활성화
+  max_symbols: 5                # 보수 모드: 과도한 분산 진입 억제
+  min_change_percent: 3.0       # 급변 자산 진입 기준 상향
+  min_volatility_percent: 0.3   # 저품질 노이즈 구간 필터 강화
   min_volume_quote: 0           # 최소 24h 거래량 (quote 기준, 0=무제한)
   sort_by: change_abs           # change_abs(급등락), change_up(상승), volume(거래량)
   quote: KRW                    # 업비트: KRW, 바이낸스: USDT
@@ -72,8 +72,8 @@ strategies:
     - rsi
     - macd
     - scalping
-  default: scalping                   # 기본: 단타 전략
-  cooldown_minutes: 1            # 동일 신호 재발생 간격 (분) - 매수 빈도 증가
+  default: rsi                   # 보수 모드: 단타 대신 RSI 기본 전략
+  cooldown_minutes: 5            # 재진입 간격 확대
   # 단타 전략 설정 (default: scalping 사용 시)
   scalping:
     rsi:
@@ -84,21 +84,21 @@ strategies:
       fast_period: 6             # 짧은 MACD
       slow_period: 13
       signal_period: 5
-    require_both: false          # RSI 또는 MACD 하나만 있어도 진입 (매수 빈도 증가)
+    require_both: true           # 보수 모드: RSI+MACD 동시 충족 시에만 진입
 
 # 리스크 관리 설정
 risk_management:
-  stop_loss_percent: -1.0        # 손절 기준 (%)
-  take_profit_percent: 1.5      # 익절 기준 (%)
+  stop_loss_percent: -1.2        # 손절 기준 (%) - 과도한 손실 방지
+  take_profit_percent: 2.5       # 익절 기준 (%) - 손익비 개선
   # 단타 모드 시 권장: stop_loss -1%, take_profit 1~2%
-  max_positions: 3              # 최대 동시 포지션 수
-  max_daily_loss_percent: -1000.0   # 일일 최대 손실 (%) - 음수로 설정
-  position_size_percent: 10      # 1회 주문 금액 비율 (%) - 5만원×10%=5천원(업비트 최소)
-  min_balance_percent: 5         # 최소 잔고 유지 비율 (%)
+  max_positions: 1               # 보수 모드: 동시 포지션 최소화
+  max_daily_loss_percent: -2.0   # 일일 최대 손실 제한
+  position_size_percent: 5       # 1회 주문 금액 비율 축소
+  min_balance_percent: 30        # 현금성 잔고 여유 확대
 
 # 실행 설정
 execution:
-  check_interval: 15             # 매수/매도 신호 체크 간격 (초) - 15초 권장 (단타용)
+  check_interval: 30             # 신호 체크 빈도 축소(과매매 억제)
   order_type: market             # market, limit
   slippage_tolerance: 0.005      # 슬리피지 허용 범위 (0.5%)
   retry_attempts: 3              # 주문 재시도 횟수
@@ -162,8 +162,8 @@ ai:
   
   # 신호 생성 설정
   signal_interval: 60          # 신호 생성 간격 (초)
-  confidence_threshold: 0.5     # 신뢰도 임계값 (낮추면 매수 더 자주)
-  conflict_action: follow_rule  # 규칙 vs AI 충돌 시 규칙 따름 (매수 빈도 증가)
+  confidence_threshold: 0.75     # 보수 모드: 높은 신뢰도일 때만 AI 신호 반영
+  conflict_action: hold          # 규칙 vs AI 충돌 시 관망
   
   # 비용 제어
   cache_enabled: true           # 응답 캐싱 활성화
