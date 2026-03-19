@@ -398,10 +398,11 @@ class ExchangeAdapter:
         self,
         symbol: str,
         amount: float,
-        params: Optional[Dict] = None
+        params: Optional[Dict] = None,
+        price: Optional[float] = None
     ) -> Order:
-        """시장가 매수"""
-        return await self.create_order(symbol, "market", "buy", amount, None, params)
+        """시장가 매수 (업비트: price 필수)"""
+        return await self.create_order(symbol, "market", "buy", amount, price, params)
     
     async def place_market_sell(
         self,
@@ -453,7 +454,8 @@ class ExchangeAdapter:
         market_info = self.get_market_info(symbol)
         limits = market_info.get("limits", {})
         amount_limits = limits.get("amount", {})
-        return amount_limits.get("min", 0) if amount_limits else 0
+        min_val = amount_limits.get("min") if amount_limits else None
+        return float(min_val) if min_val is not None else 0.0
     
     def round_amount(self, symbol: str, amount: float) -> float:
         """수량 반올림"""

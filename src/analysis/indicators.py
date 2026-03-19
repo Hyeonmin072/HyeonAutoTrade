@@ -299,12 +299,12 @@ class TechnicalIndicators:
         # Bandwidth
         bandwidth = (upper - lower) / middle if middle != 0 else 0
         
-        # %B (현재价格在 밴드 내 위치)
+        # %B (현재가가 밴드 내 위치)
         current_price = prices[-1]
-        if upper != lower:
-            position = (current_price - lower) / (upper - lower)
-        else:
+        if current_price is None or upper == lower:
             position = 0.5
+        else:
+            position = (current_price - lower) / (upper - lower)
         
         return BollingerBandsResult(
             upper=upper,
@@ -429,6 +429,15 @@ class TechnicalIndicators:
         Returns:
             모든 지표 결과 딕셔너리
         """
+        # None/비숫자 제거 (float vs None 비교 오류 방지)
+        clean_prices = []
+        for p in prices:
+            if p is not None and isinstance(p, (int, float)):
+                try:
+                    clean_prices.append(float(p))
+                except (TypeError, ValueError):
+                    pass
+        prices = clean_prices if clean_prices else list(prices)
         return {
             "rsi": self.calculate_rsi(prices, rsi_period),
             "macd": self.calculate_macd(prices, macd_fast, macd_slow, macd_signal),

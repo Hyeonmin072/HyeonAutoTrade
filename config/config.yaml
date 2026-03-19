@@ -93,7 +93,7 @@ risk_management:
   # 단타 모드 시 권장: stop_loss -1%, take_profit 1~2%
   max_positions: 3              # 최대 동시 포지션 수
   max_daily_loss_percent: -3.0   # 일일 최대 손실 (%) - 음수로 설정
-  position_size_percent: 10      # 1회 주문 금액 비율 (%)
+  position_size_percent: 10      # 1회 주문 금액 비율 (%) - 5만원×10%=5천원(업비트 최소)
   min_balance_percent: 5         # 최소 잔고 유지 비율 (%)
 
 # 실행 설정
@@ -103,6 +103,7 @@ execution:
   slippage_tolerance: 0.005      # 슬리피지 허용 범위 (0.5%)
   retry_attempts: 3              # 주문 재시도 횟수
   retry_delay: 2                 # 재시도 지연 (초)
+  min_order_amount_quote: 5000   # 최소 주문 금액 (원화 KRW) - 업비트 5,000원 필수
 
 # 모니터링 설정
 monitoring:
@@ -147,7 +148,7 @@ mode:
 ai:
   enabled: true                # AI 기능 활성화 여부
   provider: gemini              # 현재는 gemini만 지원
-  model: gemini-1.5-flash      # gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash
+  model: gemini-2.5-flash      # gemini-2.5-flash(안정), gemini-3-flash-preview(최신)
   
   # API 키는 .env 파일에서 GEMINI_API_KEY 또는 GOOGLE_AI_API_KEY로 설정
   

@@ -98,7 +98,7 @@ class ContextBuilder:
         # RSI
         if "rsi" in indicators_data:
             rsi = indicators_data["rsi"]
-            if hasattr(rsi, "rsi"):
+            if hasattr(rsi, "rsi") and rsi.rsi is not None:
                 parts.append(f"RSI: {rsi.rsi:.1f}")
                 if rsi.rsi < 30:
                     parts.append("(과매도)")
@@ -111,28 +111,28 @@ class ContextBuilder:
         # MACD
         if "macd" in indicators_data:
             macd = indicators_data["macd"]
-            if hasattr(macd, "macd"):
+            if hasattr(macd, "macd") and macd.macd is not None:
                 parts.append(f"MACD: {macd.macd:.4f}")
-                if macd.histogram > 0:
+                if macd.histogram is not None and macd.histogram > 0:
                     parts.append("(상승)")
                 else:
                     parts.append("(하락)")
             elif isinstance(macd, dict):
-                hist = macd.get("histogram", 0)
+                hist = macd.get("histogram", 0) or 0
                 parts.append(f"MACD 히스토그램: {hist:.4f}")
                 parts.append("(상승)" if hist > 0 else "(하락)")
         
         # Bollinger Bands
         if "bollinger_bands" in indicators_data:
             bb = indicators_data["bollinger_bands"]
-            if hasattr(bb, "position"):
+            if hasattr(bb, "position") and bb.position is not None:
                 parts.append(f"BB 위치: {bb.position:.2%}")
                 if bb.position < 0.2:
                     parts.append("(하단 밴드 근처)")
                 elif bb.position > 0.8:
                     parts.append("(상단 밴드 근처)")
             elif isinstance(bb, dict):
-                pos = bb.get("position", 0.5)
+                pos = bb.get("position", 0.5) or 0.5
                 parts.append(f"BB 위치: {pos:.2%}")
         
         # Moving Averages

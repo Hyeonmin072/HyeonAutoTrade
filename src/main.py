@@ -379,7 +379,9 @@ class TradingBot:
         try:
             if symbol not in self._price_cache:
                 self._price_cache[symbol] = []
-            self._price_cache[symbol] = list(closes)[-200:]  # 1분봉 close 시퀀스
+            # None 제거 (지표/비교 연산 오류 방지)
+            valid = [p for p in closes if p is not None and isinstance(p, (int, float))]
+            self._price_cache[symbol] = valid[-200:]
             
             # 리스크 관리 업데이트
             if self.risk_manager.positions and closes:
@@ -390,7 +392,11 @@ class TradingBot:
     async def _update_risk_from_prices(self) -> None:
         """가격 캐시 기반 리스크 업데이트"""
         try:
-            prices = {s: (self._price_cache.get(s) or [0])[-1] for s in self.risk_manager.positions}
+            prices = {}
+            for s in self.risk_manager.positions:
+                arr = self._price_cache.get(s) or [0]
+                valid = [p for p in arr if p is not None and isinstance(p, (int, float))]
+                prices[s] = valid[-1] if valid else 0
             to_close = self.risk_manager.update_positions(prices)
             for symbol in to_close:
                 await self._close_position_for_risk(symbol)
@@ -400,10 +406,11 @@ class TradingBot:
     async def _on_ticker(self, ticker) -> None:
         """티커 업데이트 콜백"""
         try:
-            # 가격 캐시 업데이트
+            # 가격 캐시 업데이트 (None 스킵)
             symbol = ticker.symbol
-            if symbol in self._price_cache:
-                self._price_cache[symbol].append(ticker.price)
+            price = getattr(ticker, "price", None)
+            if symbol in self._price_cache and price is not None and isinstance(price, (int, float)):
+                self._price_cache[symbol].append(price)
                 
                 # 최대 200개 유지
                 if len(self._price_cache[symbol]) > 200:
@@ -453,8 +460,9 @@ class TradingBot:
     
     async def _check_and_trade(self, symbol: str) -> None:
         """신호 체크 및 거래"""
-        # 충분한 데이터 확인
-        prices = self._price_cache.get(symbol, [])
+        # 충분한 데이터 확인 (None 제거 - 지표/비교 연산 오류 방지)
+        raw = self._price_cache.get(symbol, [])
+        prices = [p for p in raw if p is not None and isinstance(p, (int, float))]
         min_data_points = self.signal_generator.strategy.get_required_data_points()
         
         if len(prices) < min_data_points:
@@ -462,8 +470,8 @@ class TradingBot:
             return
         
         # 단타 변동률 필터 (저변동 코인 스킵)
-        min_volatility = self.config.get("scanner", {}).get("min_volatility_percent", 0.1)
-        if min_volatility > 0 and len(prices) >= 5:
+        min_volatility = self.config.get("scanner", {}).get("min_volatility_percent", 0.1) or 0.1
+        if min_volatility and min_volatility > 0 and len(prices) >= 5:
             lookback = min(5, len(prices) - 1)
             change_pct = abs(prices[-1] - prices[-1 - lookback]) / (prices[-1 - lookback] or 1e-8) * 100
             if change_pct < min_volatility:
@@ -498,6 +506,7 @@ class TradingBot:
         indicators_summary = ctx.format_indicators(indicators_data)
         recent_prices_preview = ", ".join(
             f"{p:.2f}" for p in (prices[-30:] if len(prices) >= 30 else prices)
+            if p is not None and isinstance(p, (int, float))
         )
         self._last_signal_insights[symbol] = {
             "symbol": symbol,
@@ -576,21 +585,32 @@ class TradingBot:
         position_size = balance * (self.config["risk_management"]["position_size_percent"] / 100)
         if self.exchange.is_futures:
             position_size *= self.exchange.leverage
+        
+        # 최소 주문 금액 (업비트 5,000원) - 비율로 부족해도 잔고 충분하면 최소금액 사용
+        min_quote = self.config.get("execution", {}).get("min_order_amount_quote", 5000)
+        if min_quote and balance < min_quote:
+            if symbol in self._last_signal_insights:
+                self._last_signal_insights[symbol]["skip_reason"] = f"잔고 부족 ({balance:.0f} < {min_quote}원)"
+            return
+        if min_quote and position_size < min_quote:
+            position_size = min_quote  # 최소금액으로 주문 (여러 번 주문 가능)
+        
         amount = position_size / price
         
-        # 최소 수량 확인
-        min_amount = self.exchange.get_min_order_amount(symbol)
-        if amount < min_amount:
+        # 최소 수량 확인 (min_amount None 방지)
+        min_amount = self.exchange.get_min_order_amount(symbol) or 0.0
+        if min_amount and amount < min_amount:
             logger.warning(f"Amount {amount} below minimum {min_amount}")
             if symbol in self._last_signal_insights:
                 self._last_signal_insights[symbol]["skip_reason"] = f"최소 수량 미달 ({amount:.6f} < {min_amount})"
             return
         
-        # 주문 실행
+        # 주문 실행 (업비트 시장가 매수는 price 필수)
         result = await self.order_manager.execute_buy(
             symbol=symbol,
             amount=amount,
             order_type=self.config["execution"]["order_type"],
+            price=price,
             strategy=self.signal_generator.strategy_name
         )
         
@@ -693,8 +713,8 @@ class TradingBot:
         position_size *= self.exchange.leverage
         amount = position_size / price
         
-        min_amount = self.exchange.get_min_order_amount(symbol)
-        if amount < min_amount:
+        min_amount = self.exchange.get_min_order_amount(symbol) or 0.0
+        if min_amount and amount < min_amount:
             logger.warning(f"Amount {amount} below minimum {min_amount}")
             return
         
@@ -751,6 +771,7 @@ class TradingBot:
             symbol=symbol,
             amount=position.quantity,
             order_type=self.config["execution"]["order_type"],
+            price=price,
             strategy=self.signal_generator.strategy_name
         )
         
@@ -781,11 +802,12 @@ class TradingBot:
         if not position:
             return
         if position.side == "short":
-            # 숏 청산: 매수 (reduce_only)
+            # 숏 청산: 매수 (reduce_only, 업비트 시장가 시 price 필요)
             result = await self.order_manager.execute_buy(
                 symbol=symbol,
                 amount=position.quantity,
                 order_type=self.config["execution"]["order_type"],
+                price=position.current_price,
                 strategy="risk_management",
                 reduce_only=True
             )

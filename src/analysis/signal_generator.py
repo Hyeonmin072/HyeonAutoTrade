@@ -383,10 +383,10 @@ class ScalpingStrategy(BaseStrategy):
     def __init__(self, config: Optional[Dict] = None):
         super().__init__("Scalping", config)
         scalping_cfg = (config or {}).get("scalping", config or {})
-        # 빠른 지표 파라미터
-        self.rsi_period = scalping_cfg.get("rsi", {}).get("period", 7)
-        self.rsi_oversold = scalping_cfg.get("rsi", {}).get("oversold", 25)
-        self.rsi_overbought = scalping_cfg.get("rsi", {}).get("overbought", 75)
+        # 빠른 지표 파라미터 (None 방지)
+        self.rsi_period = scalping_cfg.get("rsi", {}).get("period", 7) or 7
+        self.rsi_oversold = scalping_cfg.get("rsi", {}).get("oversold", 25) or 25
+        self.rsi_overbought = scalping_cfg.get("rsi", {}).get("overbought", 75) or 75
         self.macd_fast = scalping_cfg.get("macd", {}).get("fast_period", 6)
         self.macd_slow = scalping_cfg.get("macd", {}).get("slow_period", 13)
         self.macd_signal = scalping_cfg.get("macd", {}).get("signal_period", 5)
@@ -414,48 +414,54 @@ class ScalpingStrategy(BaseStrategy):
         
         current_price = prices[-1]
         
+        # RSI/MACD None 가드 (float vs None 비교 오류 방지)
+        rsi_val = rsi_result.rsi if rsi_result.rsi is not None else 50.0
+        hist = macd_result.histogram if macd_result.histogram is not None else 0.0
+        macd_val = macd_result.macd if macd_result.macd is not None else 0.0
+        sig_val = macd_result.signal if macd_result.signal is not None else 0.0
+        
         # RSI 신호
-        rsi_buy = rsi_result.rsi < self.rsi_oversold
-        rsi_sell = rsi_result.rsi > self.rsi_overbought
+        rsi_buy = rsi_val < self.rsi_oversold
+        rsi_sell = rsi_val > self.rsi_overbought
         
         # MACD 신호
-        macd_buy = macd_result.histogram > 0 and macd_result.macd > macd_result.signal
-        macd_sell = macd_result.histogram < 0 and macd_result.macd < macd_result.signal
+        macd_buy = hist > 0 and macd_val > sig_val
+        macd_sell = hist < 0 and macd_val < sig_val
         
         if self.require_both:
             # RSI + MACD 동시 일치 시에만 신호
             if rsi_buy and macd_buy:
                 strength = min(
-                    (1.0 - rsi_result.rsi / self.rsi_oversold) * 0.5 +
-                    min(abs(macd_result.histogram) / (abs(macd_result.macd) + 1e-8) * 2, 0.5),
+                    (1.0 - rsi_val / self.rsi_oversold) * 0.5 +
+                    min(abs(hist) / (abs(macd_val) + 1e-8) * 2, 0.5),
                     1.0
                 )
                 return TradingSignal(
                     symbol=symbol,
                     signal_type=SignalType.BUY,
                     strength=strength,
-                    reason=f"[Scalping] RSI oversold ({rsi_result.rsi:.1f}) + MACD bullish",
+                    reason=f"[Scalping] RSI oversold ({rsi_val:.1f}) + MACD bullish",
                     price=current_price,
                     indicators={
-                        "rsi": rsi_result.rsi,
-                        "macd_histogram": macd_result.histogram,
+                        "rsi": rsi_val,
+                        "macd_histogram": hist,
                     }
                 )
             elif rsi_sell and macd_sell:
                 strength = min(
-                    (rsi_result.rsi - self.rsi_overbought) / (100 - self.rsi_overbought) * 0.5 +
-                    min(abs(macd_result.histogram) / (abs(macd_result.macd) + 1e-8) * 2, 0.5),
+                    (rsi_val - self.rsi_overbought) / (100 - self.rsi_overbought) * 0.5 +
+                    min(abs(hist) / (abs(macd_val) + 1e-8) * 2, 0.5),
                     1.0
                 )
                 return TradingSignal(
                     symbol=symbol,
                     signal_type=SignalType.SELL,
                     strength=strength,
-                    reason=f"[Scalping] RSI overbought ({rsi_result.rsi:.1f}) + MACD bearish",
+                    reason=f"[Scalping] RSI overbought ({rsi_val:.1f}) + MACD bearish",
                     price=current_price,
                     indicators={
-                        "rsi": rsi_result.rsi,
-                        "macd_histogram": macd_result.histogram,
+                        "rsi": rsi_val,
+                        "macd_histogram": hist,
                     }
                 )
         else:
@@ -469,9 +475,9 @@ class ScalpingStrategy(BaseStrategy):
                     symbol=symbol,
                     signal_type=SignalType.BUY,
                     strength=strength,
-                    reason=f"[Scalping] RSI {rsi_result.rsi:.1f} / MACD {'bullish' if macd_buy else 'neutral'}",
+                    reason=f"[Scalping] RSI {rsi_val:.1f} / MACD {'bullish' if macd_buy else 'neutral'}",
                     price=current_price,
-                    indicators={"rsi": rsi_result.rsi, "macd_histogram": macd_result.histogram}
+                    indicators={"rsi": rsi_val, "macd_histogram": hist}
                 )
             elif rsi_sell or macd_sell:
                 if rsi_sell and macd_sell:
@@ -482,15 +488,15 @@ class ScalpingStrategy(BaseStrategy):
                     symbol=symbol,
                     signal_type=SignalType.SELL,
                     strength=strength,
-                    reason=f"[Scalping] RSI {rsi_result.rsi:.1f} / MACD {'bearish' if macd_sell else 'neutral'}",
+                    reason=f"[Scalping] RSI {rsi_val:.1f} / MACD {'bearish' if macd_sell else 'neutral'}",
                     price=current_price,
-                    indicators={"rsi": rsi_result.rsi, "macd_histogram": macd_result.histogram}
+                    indicators={"rsi": rsi_val, "macd_histogram": hist}
                 )
         
         return self._create_hold_signal(
             symbol,
             current_price,
-            f"[Scalping] RSI {rsi_result.rsi:.1f}, MACD neutral - no entry"
+            f"[Scalping] RSI {rsi_val:.1f}, MACD neutral - no entry"
         )
     
     def get_required_data_points(self) -> int:

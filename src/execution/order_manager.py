@@ -250,7 +250,7 @@ class OrderManager:
                 # 주문 생성
                 if order_type == "market":
                     if side == "buy":
-                        order = await self.exchange.place_market_buy(symbol, amount, order_params)
+                        order = await self.exchange.place_market_buy(symbol, amount, order_params, price)
                     else:
                         order = await self.exchange.place_market_sell(symbol, amount, order_params)
                 else:

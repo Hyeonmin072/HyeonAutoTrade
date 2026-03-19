@@ -277,11 +277,12 @@ async def check_websocket_connection(client) -> HealthCheckResult:
     import time
     start = time.perf_counter()
     
+    # REST 전용 모드: WebSocket 미사용 시 정상으로 처리
     if client is None:
         return HealthCheckResult(
             component="websocket",
-            status=HealthStatus.CRITICAL,
-            message="WebSocket client not initialized",
+            status=HealthStatus.HEALTHY,
+            message="REST-only mode (skipped)",
             latency_ms=0
         )
     
